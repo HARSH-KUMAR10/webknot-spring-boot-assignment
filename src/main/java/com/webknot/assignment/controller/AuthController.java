@@ -1,14 +1,13 @@
 package com.webknot.assignment.controller;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
-import com.webknot.assignment.model.Role;
+import com.webknot.assignment.model.UserRole;
 import com.webknot.assignment.model.RoleEnum;
 import com.webknot.assignment.model.User;
+import com.webknot.assignment.payload.request.ForgetPasswordRequest;
 import com.webknot.assignment.payload.request.LoginRequest;
 import com.webknot.assignment.payload.response.JwtResponse;
 import com.webknot.assignment.payload.response.MessageResponse;
@@ -17,6 +16,7 @@ import com.webknot.assignment.repository.UserRepository;
 import com.webknot.assignment.security.jwt.JwtUtils;
 import com.webknot.assignment.security.services.UserDetailsImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -87,38 +87,45 @@ public class AuthController {
                 encoder.encode(signUpRequest.getPassword()));
 
         Set<String> strRoles = signUpRequest.getRole();
-        Set<Role> roles = new HashSet<>();
+        Set<UserRole> userRoles = new HashSet<>();
 
         if (strRoles == null) {
-            Role userRole = roleRepository.findByName(RoleEnum.ROLE_USER)
+            UserRole userRole = roleRepository.findByName(RoleEnum.ROLE_USER)
                     .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-            roles.add(userRole);
+            userRoles.add(userRole);
         } else {
             strRoles.forEach(role -> {
                 switch (role) {
                     case "admin":
-                        Role adminRole = roleRepository.findByName(RoleEnum.ROLE_ADMIN)
+                        UserRole adminUserRole = roleRepository.findByName(RoleEnum.ROLE_ADMIN)
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(adminRole);
+                        userRoles.add(adminUserRole);
 
                         break;
                     case "mod":
-                        Role modRole = roleRepository.findByName(RoleEnum.ROLE_MODERATOR)
+                        UserRole modUserRole = roleRepository.findByName(RoleEnum.ROLE_MODERATOR)
                                 .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(modRole);
+                        userRoles.add(modUserRole);
 
                         break;
                     default:
-                        Role userRole = roleRepository.findByName(RoleEnum.ROLE_USER)
-                                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
-                        roles.add(userRole);
+                        Optional<UserRole> userRole = roleRepository.findByName(RoleEnum.ROLE_USER);
+                        userRoles.add(userRole.get());
                 }
             });
         }
 
-        user.setRoles(roles);
+        user.setUserRoles(userRoles);
         userRepository.save(user);
 
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+    }
+
+    @PostMapping("/forget-password")
+    public ResponseEntity<?> forgetPassword(@RequestBody ForgetPasswordRequest forgetPasswordRequest){
+        if(forgetPasswordRequest.getEmail()==null || forgetPasswordRequest.getEmail().isEmpty()){
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponse("No Email found"));
+        }
+        return ResponseEntity.ok(new MessageResponse("Are you trying to forget password: "+ forgetPasswordRequest.getEmail()));
     }
 }

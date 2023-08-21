@@ -18,6 +18,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 @Configuration
 @EnableMethodSecurity
@@ -59,8 +60,8 @@ public class WebSecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth ->
-                        auth.requestMatchers("/api/auth/**").permitAll()
-                                .requestMatchers("/api/test/**").permitAll()
+                        auth.requestMatchers(new AntPathRequestMatcher("/api/auth/**")).permitAll()
+                                .requestMatchers(new AntPathRequestMatcher("/api/test/**")).permitAll()
                                 .anyRequest().authenticated()
                 );
 
@@ -70,4 +71,22 @@ public class WebSecurityConfig {
 
         return http.build();
     }
+//
+//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+//        http.csrf(csrf -> csrf.disable())
+//                .exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler))
+//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//                .authorizeHttpRequests(auth ->
+//                        auth.requestMatchers(new AntPathRequestMatcher("/h2-console")).permitAll()
+//                                .requestMatchers("/api/auth/**").permitAll()
+//                                .requestMatchers("/api/test/**").permitAll()
+//                                .anyRequest().authenticated()
+//                );
+//
+//        http.authenticationProvider(authenticationProvider());
+//
+//        http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+//
+//        return http.build();
+//    }
 }

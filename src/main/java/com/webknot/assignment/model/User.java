@@ -26,7 +26,7 @@ public class User {
     private String password;
 
     @OneToMany(fetch = FetchType.LAZY)
-    private Set<Role> roles = new HashSet<>();
+    private Set<UserRole> userRoles = new HashSet<>();
 
     public User(){}
     public User(String username, String email, String password) {
