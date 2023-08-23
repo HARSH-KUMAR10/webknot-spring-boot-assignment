@@ -4,11 +4,17 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 
+import com.webknot.assignment.mailService.EmailService;
+import com.webknot.assignment.mailService.EmailServiceImpl;
 import com.webknot.assignment.model.UserRole;
 import com.webknot.assignment.model.RoleEnum;
 import com.webknot.assignment.model.User;
+import com.webknot.assignment.model.email.EmailDetails;
+import com.webknot.assignment.model.otp.Otp;
+import com.webknot.assignment.otpService.OtpService;
 import com.webknot.assignment.payload.request.ForgetPasswordRequest;
 import com.webknot.assignment.payload.request.LoginRequest;
+import com.webknot.assignment.payload.request.VerificationAccountOtp;
 import com.webknot.assignment.payload.response.JwtResponse;
 import com.webknot.assignment.payload.response.MessageResponse;
 import com.webknot.assignment.repository.RoleRepository;
@@ -23,11 +29,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.webknot.assignment.payload.request.SignupRequest;
 
@@ -50,6 +52,12 @@ public class AuthController {
 
     @Autowired
     JwtUtils jwtUtils;
+
+    @Autowired
+    EmailService emailService;
+
+    @Autowired
+    OtpService otpService;
 
     @PostMapping("/sign-in")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
@@ -126,6 +134,30 @@ public class AuthController {
         if(forgetPasswordRequest.getEmail()==null || forgetPasswordRequest.getEmail().isEmpty()){
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new MessageResponse("No Email found"));
         }
-        return ResponseEntity.ok(new MessageResponse("Are you trying to forget password: "+ forgetPasswordRequest.getEmail()));
+        Long generatedOtp = otpService.createAndReturnOTP(forgetPasswordRequest.getEmail());
+        return ResponseEntity.ok(new MessageResponse(emailService.sendSimpleMail(new EmailDetails(forgetPasswordRequest.getEmail(),"Reset your password. Use "+generatedOtp,"Otp for forget-password",""))));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtp(@RequestBody VerificationAccountOtp verificationAccountOtp){
+        if(otpService.checkOtp(verificationAccountOtp.getEmail(), verificationAccountOtp.getOtp())){
+            if(Objects.equals(verificationAccountOtp.getAccountPassword(), verificationAccountOtp.getConfirmPassword())) {
+                userRepository.updatePasswordByEmail(encoder.encode(verificationAccountOtp.getAccountPassword()), verificationAccountOtp.getEmail());
+                return ResponseEntity.ok(new MessageResponse("Password updated successfully."));
+            }else{
+                return ResponseEntity.ok(new MessageResponse("Confirm password doesn't match"));
+            }
+        }else{
+            return ResponseEntity.ok(new MessageResponse("Failed to update password, check otp"));
+        }
+    }
+    @GetMapping()
+    public ResponseEntity<?> getAllUsers(){
+        return ResponseEntity.ok(userRepository.findAll());
+    }
+
+    @GetMapping("/all-otps")
+    public ResponseEntity<?> getAllOtps(){
+        return ResponseEntity.ok(otpService.getAll());
     }
 }
